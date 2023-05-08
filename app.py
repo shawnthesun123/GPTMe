@@ -1,35 +1,72 @@
 import os
 
+import discord
 import openai
-from flask import Flask, redirect, render_template, request, url_for
+from dotenv import load_dotenv
+from discord.ext import commands
 
-app = Flask(__name__)
+load_dotenv()
+
 openai.api_key = os.getenv("OPENAI_API_KEY")
+TOKEN = os.getenv("DISCORD_BOT_TOKEN")
+
+intents = discord.Intents.all()
+intents.members = True
+
+bot = commands.Bot(command_prefix='!', intents=intents)
 
 
-@app.route("/", methods=("GET", "POST"))
-def index():
-    if request.method == "POST":
-        animal = request.form["animal"]
-        response = openai.Completion.create(
-            model="text-davinci-003",
-            prompt=generate_prompt(animal),
-            temperature=0.6,
+@bot.event
+async def on_ready():
+    print(f'We have logged in as {bot.user.name}')
+
+
+defaultMessage = [
+    {"role": "system", "content": "You are a helpful, but straight to the point AI Coding assistant."},
+]
+
+messages = defaultMessage
+
+defaultUser = ""
+curr_user = defaultUser
+
+
+@bot.command(name='gpt')
+async def gpt_command(ctx, *, userText):
+    global curr_user
+    global messages
+    if userText == "reset":
+        messages = defaultMessage
+        await ctx.send("Bot has been reset")
+    elif userText == "reset user":
+        curr_user = defaultUser
+        await ctx.send("User has been reset")
+    elif userText == "reset all":
+        messages = defaultMessage
+        curr_user = defaultUser
+        await ctx.send("Reset All")
+
+    if curr_user == "":
+        curr_user = ctx.author.name
+
+    print(f'User: {curr_user}')
+
+    if ctx.author.name == curr_user:
+        messages.append({"role": "user", "content": userText})
+
+        # Use the OpenAI API to generate a response to the message
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=messages
         )
-        return redirect(url_for("index", result=response.choices[0].text))
+        reply = response.choices[0].message.content
+        messages.append({"role": "assistant", "content": reply})
+        # Send the response as a message
+        await ctx.send(reply)
+    else:
+        await ctx.send("You weren't the first user")
 
-    result = request.args.get("result")
-    return render_template("index.html", result=result)
 
 
-def generate_prompt(animal):
-    return """Suggest three names for an animal that is a superhero.
-
-Animal: Cat
-Names: Captain Sharpclaw, Agent Fluffball, The Incredible Feline
-Animal: Dog
-Names: Ruff the Protector, Wonder Canine, Sir Barks-a-Lot
-Animal: {}
-Names:""".format(
-        animal.capitalize()
-    )
+# Start the bot
+bot.run(TOKEN)
