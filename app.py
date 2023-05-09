@@ -6,13 +6,11 @@ from dotenv import load_dotenv
 from discord.ext import commands
 
 load_dotenv()
-
 openai.api_key = os.getenv("OPENAI_API_KEY")
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 
 intents = discord.Intents.all()
 intents.members = True
-
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 
@@ -21,20 +19,15 @@ async def on_ready():
     print(f'We have logged in as {bot.user.name}')
 
 
-defaultMessage = [
-    {"role": "system", "content": "You are a helpful, but straight to the point AI Coding assistant."},
-]
-
+defaultMessage = [{"role": "system", "content": "You are a helpful, but straight to the point AI Coding assistant."}]
 messages = defaultMessage
-
 defaultUser = ""
 curr_user = defaultUser
 
 
 @bot.command(name='gpt')
 async def gpt_command(ctx, *, userText):
-    global curr_user
-    global messages
+    global curr_user, messages
     if userText == "reset":
         messages = defaultMessage
         await ctx.send("Bot has been reset")
@@ -65,7 +58,6 @@ async def gpt_command(ctx, *, userText):
         await ctx.send(reply)
     else:
         await ctx.send("You weren't the first user")
-
 
 
 # Start the bot
